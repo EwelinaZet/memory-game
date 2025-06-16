@@ -1,7 +1,13 @@
 <template>
   <div class="game-board-container" ref="containerRef">
     <div class="board" :style="{ width: boardSize.width + 'px', height: boardSize.height + 'px' }">
-      <GameCard v-for="card in cards" :key="card.id" :card="card" :dpr="dpr" />
+      <GameCard
+        v-for="card in cards"
+        :key="card.id"
+        :card="card"
+        :dpr="dpr"
+        @card-click="handleCardClick"
+      />
     </div>
   </div>
 </template>
@@ -19,6 +25,7 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const cards = ref<Card[]>([])
 const level = ref<number>(1)
 const dpr = window.devicePixelRatio || 1
+const flippedCards = ref<Card[]>([])
 
 const createcards = () => {
   const cards: Card[] = []
@@ -55,6 +62,10 @@ const createcards = () => {
   })
 
   return cards
+}
+
+const handleCardClick = (clickedCard: Card) => {
+  flippedCards.value.push(clickedCard)
 }
 
 onMounted(() => {
