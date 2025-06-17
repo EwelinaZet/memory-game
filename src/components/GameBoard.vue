@@ -6,6 +6,7 @@
         :key="card.id"
         :card="card"
         :dpr="dpr"
+        :flipLocked="flipLocked"
         @card-click="handleCardClick"
       />
     </div>
@@ -26,6 +27,7 @@ const cards = ref<Card[]>([])
 const level = ref<number>(1)
 const dpr = window.devicePixelRatio || 1
 const flippedCards = ref<Card[]>([])
+const flipLocked = ref(false)
 
 const createcards = () => {
   const cards: Card[] = []
@@ -58,6 +60,8 @@ const createcards = () => {
       y: padding + row * (cardHeight + padding),
       width: cardWidth,
       height: cardHeight,
+      isMatched: false,
+      flipBack: false,
     })
   })
 
@@ -66,6 +70,32 @@ const createcards = () => {
 
 const handleCardClick = (clickedCard: Card) => {
   flippedCards.value.push(clickedCard)
+
+  if (flippedCards.value.length === 2) {
+    flipLocked.value = true
+    setTimeout(() => {
+      checkForMatch(clickedCard)
+    }, 1000)
+  }
+}
+
+const checkForMatch = (clickedCard: Card) => {
+  const [card1, card2] = flippedCards.value
+
+  if (card1.rarity === card2.rarity) {
+    card1.isMatched = true
+    card2.isMatched = true
+    cards.value = cards.value.filter((card) => card.id !== card1.id && card.id !== card2.id)
+  } else {
+    const flippedIds = new Set(flippedCards.value.map((card) => card.id))
+    cards.value.forEach((card) => {
+      if (flippedIds.has(card.id)) {
+        card.flipBack = true
+      }
+    })
+  }
+  flippedCards.value = []
+  flipLocked.value = false
 }
 
 onMounted(() => {

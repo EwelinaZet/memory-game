@@ -15,13 +15,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import type { Card } from '../types/memory'
 import { RARITY_COLORS } from '../types/memory'
 
 const props = defineProps<{
   card: Card
   dpr: number
+  flipLocked: boolean
 }>()
 
 const emit = defineEmits<{
@@ -72,12 +73,18 @@ const drawCard = () => {
   ctx.value.restore()
 }
 
-function startFlip() {
+const startFlip = (): void => {
+  if (isBack.value || animFrame || props.flipLocked) return
+  isBack.value = true
   emit('cardClick', props.card)
+  cardFlip(0, 1)
+}
+
+const cardFlip = (fromVal: number, toVal: number): void => {
   if (animFrame) return
   const start = performance.now()
-  const from = isBack.value ? 1 : 0
-  const to = isBack.value ? 0 : 1
+  const from = fromVal
+  const to = toVal
 
   function animate(now: number) {
     const elapsed = now - start
@@ -88,12 +95,20 @@ function startFlip() {
     if (progress < 1) {
       animFrame = requestAnimationFrame(animate)
     } else {
-      isBack.value = !isBack.value
       animFrame = null
     }
   }
   requestAnimationFrame(animate)
 }
+
+watch(
+  () => props.card.flipBack,
+  () => {
+    if (props.card.flipBack) cardFlip(1, 0)
+    isBack.value = false
+    props.card.flipBack = false
+  },
+)
 
 onMounted(() => {
   initCanvas()

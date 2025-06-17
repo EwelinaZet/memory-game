@@ -7,6 +7,8 @@ export interface Card {
   width: number
   height: number
   rarity: CardRarity
+  isMatched: boolean
+  flipBack: boolean
 }
 
 export interface BoardSize {
