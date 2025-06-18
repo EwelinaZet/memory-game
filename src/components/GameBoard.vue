@@ -17,6 +17,7 @@
 import { ref, onMounted } from 'vue'
 import type { Card, BoardSize, CardRarity } from '../types/memory'
 import GameCard from './GameCard.vue'
+import { Howl } from 'howler'
 
 const props = defineProps<{
   boardSize: BoardSize
@@ -28,8 +29,15 @@ const level = ref<number>(1)
 const dpr = window.devicePixelRatio || 1
 const flippedCards = ref<Card[]>([])
 const flipLocked = ref(false)
+const sound = new Howl({
+  src: ['src/assets/sounds/success.wav'],
+})
+const soundWin = new Howl({
+  src: ['src/assets/sounds/level-up.mp3'],
+})
 
-const createcards = () => {
+const createCards = () => {
+  console.log('Create cards')
   const cards: Card[] = []
   const gridSize = 2 + level.value
   const padding = 10
@@ -49,7 +57,6 @@ const createcards = () => {
   }).flat()
 
   const shuffledcards = cardPairs.sort(() => Math.random() - 0.5)
-
   shuffledcards.forEach((card, index) => {
     const row = Math.floor(index / gridSize)
     const col = index % gridSize
@@ -64,7 +71,6 @@ const createcards = () => {
       flipBack: false,
     })
   })
-
   return cards
 }
 
@@ -83,9 +89,9 @@ const checkForMatch = (clickedCard: Card) => {
   const [card1, card2] = flippedCards.value
 
   if (card1.rarity === card2.rarity) {
-    card1.isMatched = true
-    card2.isMatched = true
     cards.value = cards.value.filter((card) => card.id !== card1.id && card.id !== card2.id)
+    if (cards.value.length === 0) levelUp()
+    else sound.play()
   } else {
     const flippedIds = new Set(flippedCards.value.map((card) => card.id))
     cards.value.forEach((card) => {
@@ -98,9 +104,16 @@ const checkForMatch = (clickedCard: Card) => {
   flipLocked.value = false
 }
 
+const levelUp = () => {
+  soundWin.play()
+  setTimeout(() => {
+    level.value = level.value + 1
+    cards.value = createCards()
+  }, 1200)
+}
 onMounted(() => {
-  createcards()
-  cards.value = createcards()
+  createCards()
+  cards.value = createCards()
 })
 </script>
 
