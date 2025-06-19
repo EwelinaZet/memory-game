@@ -22,3 +22,11 @@ export const RARITY_COLORS: Record<CardRarity, [string, string]> = {
   rare: ['#66e7ff', 'cs-gun-3.png'],
   epic: ['#800080', 'cs-gun-4.png'],
 }
+
+export interface GameStats {
+  level: number
+  attempts: number
+  incorrectPairs: number
+  startTime: number | null
+  endTime: number | null
+}

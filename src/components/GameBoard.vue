@@ -1,4 +1,5 @@
 <template>
+  <GameStats :stats="gameStats" />
   <div class="game-board-container" ref="containerRef">
     <div class="board" :style="{ width: boardSize.width + 'px', height: boardSize.height + 'px' }">
       <GameCard
@@ -15,8 +16,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { Card, BoardSize, CardRarity } from '../types/memory'
+import type { Card, BoardSize, CardRarity, GameStats as GameStatsType } from '../types/memory'
 import GameCard from './GameCard.vue'
+import GameStats from './GameStats.vue'
 import { Howl } from 'howler'
 
 const props = defineProps<{
@@ -36,8 +38,15 @@ const soundWin = new Howl({
   src: ['src/assets/sounds/level-up.mp3'],
 })
 
+const gameStats = ref<GameStatsType>({
+  level: level.value,
+  attempts: 0,
+  incorrectPairs: 0,
+  startTime: null,
+  endTime: null,
+})
+
 const createCards = () => {
-  console.log('Create cards')
   const cards: Card[] = []
   const gridSize = 2 + level.value
   const padding = 10
@@ -75,9 +84,14 @@ const createCards = () => {
 }
 
 const handleCardClick = (clickedCard: Card) => {
+  if (gameStats.value.startTime === null) {
+    gameStats.value.startTime = Date.now()
+  }
+
   flippedCards.value.push(clickedCard)
 
   if (flippedCards.value.length === 2) {
+    gameStats.value.attempts++
     flipLocked.value = true
     setTimeout(() => {
       checkForMatch(clickedCard)
@@ -93,6 +107,7 @@ const checkForMatch = (clickedCard: Card) => {
     if (cards.value.length === 0) levelUp()
     else sound.play()
   } else {
+    gameStats.value.incorrectPairs++
     const flippedIds = new Set(flippedCards.value.map((card) => card.id))
     cards.value.forEach((card) => {
       if (flippedIds.has(card.id)) {
@@ -107,10 +122,24 @@ const checkForMatch = (clickedCard: Card) => {
 const levelUp = () => {
   soundWin.play()
   setTimeout(() => {
-    level.value = level.value + 1
+    level.value++
     cards.value = createCards()
   }, 1200)
+
+  gameStats.value.endTime = Date.now()
 }
+
+const resetGame = () => {
+  gameStats.value = {
+    attempts: 0,
+    incorrectPairs: 0,
+    startTime: null,
+    endTime: null,
+  }
+  cards.value = createCards()
+  flippedCards.value = []
+}
+
 onMounted(() => {
   createCards()
   cards.value = createCards()
