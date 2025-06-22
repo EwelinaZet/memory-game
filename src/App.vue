@@ -10,10 +10,23 @@
 
 <script setup lang="ts">
 import GameBoard from './components/GameBoard.vue'
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 
 const seed = ref('')
 const start = ref(false)
+
+onMounted(() => {
+  const saved = localStorage.getItem('memory-game-app')
+  if (saved) {
+    const { seed: savedSeed, start: savedStart } = JSON.parse(saved)
+    if (savedSeed) seed.value = savedSeed
+    if (savedStart) start.value = savedStart
+  }
+})
+
+watch([seed, start], ([newSeed, newStart]) => {
+  localStorage.setItem('memory-game-app', JSON.stringify({ seed: newSeed, start: newStart }))
+})
 
 const startGame = () => {
   if (!seed.value) seed.value = generateRandomSeed()
