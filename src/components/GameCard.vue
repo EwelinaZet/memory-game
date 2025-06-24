@@ -36,7 +36,7 @@ const emit = defineEmits<{
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const isBack = ref(false)
+const isBack = ref(true)
 
 const angle = ref(0)
 const duration = 600
@@ -104,8 +104,8 @@ const drawCard = () => {
 }
 
 const startFlip = (): void => {
-  if (isBack.value || animFrame || props.flipLocked) return
-  isBack.value = true
+  if (!isBack.value || animFrame || props.flipLocked) return
+  isBack.value = false
   emit('cardClick', props.card)
   cardFlip(0, 1)
 }
@@ -132,7 +132,8 @@ const cardFlip = (fromVal: number, toVal: number): void => {
   requestAnimationFrame(animate)
 }
 
-function onMouseMove(e) {
+function onMouseMove(e: MouseEvent) {
+  if (!canvasRef.value) return
   const rect = canvasRef.value.getBoundingClientRect()
   const x = (e.clientX - rect.left - props.card.width / 2) / 10
   const y = (e.clientY - rect.top - props.card.height / 2) / 10
@@ -166,15 +167,22 @@ function animateParallax() {
 
 watch(
   () => props.card.flipBack,
-  () => {
-    if (props.card.flipBack) cardFlip(1, 0)
-    isBack.value = false
-    props.card.flipBack = false
+  (newVal) => {
+    if (newVal) {
+      isBack.value = true
+      cardFlip(1, 0)
+      props.card.flipBack = false
+    }
   },
 )
 
 onMounted(() => {
   initCanvas()
+  if (props.card.isFlipped) {
+    isBack.value = false
+    angle.value = 1
+    drawCard()
+  }
 })
 </script>
 
@@ -183,7 +191,7 @@ canvas {
   cursor: pointer;
 }
 .card {
-  padding: 10px;
+  box-sizing: border-box;
 }
 img {
   display: none;

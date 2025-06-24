@@ -1,21 +1,23 @@
 <template>
-  <GameStats :stats="gameStats" />
-  <div class="game-board-container" ref="containerRef">
-    <div class="board" :style="{ width: boardSize.width + 'px', height: boardSize.height + 'px' }">
-      <GameCard
-        v-for="card in cards"
-        :key="card.id"
-        :card="card"
-        :dpr="dpr"
-        :flipLocked="flipLocked"
-        @card-click="handleCardClick"
-      />
+  <div class="game-board-wrapper">
+    <div class="game-board-container" ref="containerRef">
+      <div class="board" ref="boardRef">
+        <GameCard
+          v-for="card in cards"
+          :key="card.id"
+          :card="card"
+          :dpr="dpr"
+          :flipLocked="flipLocked"
+          @card-click="handleCardClick"
+        />
+      </div>
     </div>
+    <GameStats :stats="gameStats" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import type { Card, BoardSize, CardRarity, GameStats as GameStatsType } from '../types/memory'
 import GameCard from './GameCard.vue'
 import GameStats from './GameStats.vue'
@@ -23,11 +25,11 @@ import { Howl } from 'howler'
 import { generatePrng } from '../utils/generatePrng'
 
 const props = defineProps<{
-  boardSize: BoardSize
   seed: string
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
+const boardRef = ref<HTMLDivElement | null>(null)
 const cards = ref<Card[]>([])
 const level = ref<number>(1)
 const dpr = window.devicePixelRatio || 1
@@ -69,6 +71,7 @@ const loadState = () => {
         level.value = state.level
         cards.value = state.cards
         gameStats.value = state.gameStats
+        flippedCards.value = cards.value.filter(card => card.isFlipped)
         return true
       }
     } catch {}
@@ -77,16 +80,17 @@ const loadState = () => {
 }
 
 const createCards = () => {
-  const cards: Card[] = []
+  if (!boardRef.value) return []
+
+  const newCards: Card[] = []
   const gridSize = 2 + level.value
   const padding = 10
-  const containerWidth = props.boardSize.width
-  const containerHeight = props.boardSize.height
+  const containerWidth = boardRef.value.offsetWidth
+  const containerHeight = boardRef.value.offsetHeight
 
   const cardWidth = (containerWidth - padding * (gridSize + 1)) / gridSize
   const cardHeight = (containerHeight - padding * (gridSize + 1)) / gridSize
 
-  // Najpierw twórz tablicę rarity
   const cardRarities: CardRarity[] = []
   for (let i = 0; i < 4 + level.value * 2; i++) {
     if (i < 2) cardRarities.push('common', 'common')
@@ -99,7 +103,7 @@ const createCards = () => {
   shuffledRarities.forEach((rarity, index) => {
     const row = Math.floor(index / gridSize)
     const col = index % gridSize
-    cards.push({
+    newCards.push({
       id: index,
       rarity,
       x: padding + col * (cardWidth + padding),
@@ -108,9 +112,11 @@ const createCards = () => {
       height: cardHeight,
       isMatched: false,
       flipBack: false,
+      isFlipped: false
     })
   })
-  return cards
+  flippedCards.value = []
+  return newCards
 }
 
 const shuffle = (array: CardRarity[]) => {
@@ -127,6 +133,7 @@ const handleCardClick = (clickedCard: Card) => {
     gameStats.value.startTime = Date.now()
   }
 
+  clickedCard.isFlipped = true
   flippedCards.value.push(clickedCard)
 
   if (flippedCards.value.length === 2) {
@@ -142,7 +149,9 @@ const checkForMatch = () => {
   const [card1, card2] = flippedCards.value
 
   if (card1.rarity === card2.rarity) {
-    cards.value = cards.value.filter((card) => card.id !== card1.id && card.id !== card2.id)
+    card1.isMatched = true
+    card2.isMatched = true
+    cards.value = cards.value.filter((card) => !card.isMatched)
     if (cards.value.length === 0) levelUp()
     else sound.play()
   } else {
@@ -151,6 +160,7 @@ const checkForMatch = () => {
     cards.value.forEach((card) => {
       if (flippedIds.has(card.id)) {
         card.flipBack = true
+        card.isFlipped = false
       }
     })
   }
@@ -177,25 +187,92 @@ const resetGame = () => {
   cards.value = createCards()
 }
 
+function updateCardGeometry() {
+  if (!boardRef.value) return
+
+  const gridSize = 2 + level.value
+  const padding = 10
+  const containerWidth = boardRef.value.offsetWidth
+  const containerHeight = boardRef.value.offsetHeight
+
+  const cardWidth = (containerWidth - padding * (gridSize + 1)) / gridSize
+  const cardHeight = (containerHeight - padding * (gridSize + 1)) / gridSize
+
+  const updatedCards = cards.value.map((card) => {
+    const originalIndex = card.id
+    const row = Math.floor(originalIndex / gridSize)
+    const col = originalIndex % gridSize
+
+    return {
+      ...card,
+      x: padding + col * (cardWidth + padding),
+      y: padding + row * (cardHeight + padding),
+      width: cardWidth,
+      height: cardHeight,
+    }
+  })
+  cards.value = updatedCards
+}
+
+const handleResize = () => {
+  updateCardGeometry()
+}
+
 onMounted(() => {
   if (!loadState()) {
     cards.value = createCards()
     saveState()
+  } else {
+    updateCardGeometry()
   }
+  window.addEventListener('resize', handleResize)
 })
 
-watch([cards, level, gameStats], saveState, { deep: true })
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
+
+watch([() => props.seed], () => {
+  localStorage.removeItem(STORAGE_KEY)
+  level.value = 1
+  resetGame()
+})
+
+watch([cards, gameStats], saveState, { deep: true })
 </script>
 
 <style scoped>
+.game-board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .game-board-container {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: auto;
 }
 
 .board {
   position: relative;
+  width: 95vw;
+  height: 90vh;
+  max-width: 1000px;
+  max-height: 700px;
+  aspect-ratio: 1000 / 700;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .board {
+    width: 100vw;
+    height: 100vh;
+  }
 }
 </style>

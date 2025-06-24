@@ -4,7 +4,7 @@
       <input v-model="seed" placeholder="Podaj seed" class="seed-input" />
       <button @click="startGame" class="seed-button">Start</button>
     </div>
-    <GameBoard v-else :board-size="{ width: 1000, height: 600 }" :seed="seed" />
+    <GameBoard v-else :seed="seed" />
   </div>
 </template>
 

@@ -64,6 +64,10 @@ onUnmounted(() => {
   border-radius: 8px;
   color: white;
   font-family: Arial, sans-serif;
+  min-width: 180px;
+  backdrop-filter: blur(5px);
+  z-index: 100;
+  transition: all 0.3s;
 }
 
 .stat-item {
@@ -71,6 +75,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  font-size: 0.9rem;
 }
 
 .label {
@@ -82,5 +87,50 @@ onUnmounted(() => {
   color: #fff;
   min-width: 60px;
   text-align: right;
+}
+
+@media (max-width: 900px) {
+  .game-stats {
+    position: static;
+    top: unset;
+    right: unset;
+    margin: 16px auto 0 auto;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 8px;
+    z-index: 1;
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-stats {
+    padding: 10px;
+    min-width: 140px;
+    font-size: 0.8rem;
+  }
+
+  .stat-item {
+    margin: 3px 0;
+    font-size: 0.8rem;
+  }
+
+  .value {
+    min-width: 45px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-stats {
+    padding: 8px;
+    font-size: 0.75rem;
+    max-width: 98vw;
+  }
+
+  .stat-item {
+    margin: 2px 5px;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
 }
 </style>
